@@ -85,3 +85,20 @@ Este proyecto no es asesoramiento legal, administrativo ni profesional.
 ## Licencia
 
 MIT.
+
+## Despliegue en Vercel
+
+La web está pensada para alojarse en **Vercel** (serverless):
+
+- `public/` se sirve como estático (la web).
+- `api/*.js` son funciones serverless (`/api/oposiciones`, `/api/organismos`, `/api/novedades`, `/api/stats`) que comparten la lógica de `lib/datos.mjs`.
+- Los datos viven en `data/oposiciones.json`, **versionado en el repo** (`vercel.json` lo incluye en el bundle de las funciones).
+
+**Para actualizar los datos** (MVP, 0 €): se ejecuta el poller en local y se hace push; Vercel redespliega solo.
+
+```bash
+npm run poll          # regenera data/oposiciones.json (BOE + BOJA)
+git commit -am "datos: actualización" && git push
+```
+
+> En local sigue funcionando `npm start` (server.mjs en http://127.0.0.1:8090).
