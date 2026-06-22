@@ -69,6 +69,33 @@ export function clasificarTitulo(titulo) {
   return 'otros';
 }
 
+// Extrae los campos que un opositor espera ver en la "ficha" (estilo mad.es) a partir del
+// título oficial. Best-effort: solo se rellena lo que aparece. El plazo de presentación y la
+// titulación viven dentro del PDF de las bases, así que aquí enlazamos a ellas, no las copiamos.
+export function enriquecerCampos(titulo) {
+  const t = textoNormalizado(titulo);
+  const campos = {};
+
+  const mPlazas = t.match(/(\d[\d.]*)\s*plazas?\b/);
+  if (mPlazas) {
+    const n = Number(mPlazas[1].replace(/\./g, ''));
+    if (Number.isFinite(n) && n > 0) campos.plazas = n;
+  }
+
+  if (/promocion interna/.test(t)) campos.acceso = 'promoción interna';
+  else if (/concurso-?oposicion/.test(t)) campos.acceso = 'concurso-oposición';
+  else if (/(turno|acceso|ingreso)\s+libre|\blibre\b/.test(t)) campos.acceso = 'libre';
+
+  const mSub = t.match(/\b(a1|a2|c1|c2)\b/);
+  if (mSub) campos.grupo = mSub[1].toUpperCase();
+  else {
+    const mGr = t.match(/\bgrupo\s+([abcde])\b/);
+    if (mGr) campos.grupo = mGr[1].toUpperCase();
+  }
+
+  return campos;
+}
+
 async function cargarExistentes() {
   if (!existsSync(RUTA_DATOS)) return [];
 
@@ -206,6 +233,8 @@ async function main() {
     nuevos.push(...encontradosBoja);
     console.log(`BOJA: ${encontradosBoja.length} items filtrados.`);
   }
+
+  for (const item of nuevos) Object.assign(item, enriquecerCampos(item.titulo));
 
   const fusionados = fusionarPorId(existentes, nuevos);
   await mkdir(join(process.cwd(), 'data'), { recursive: true });

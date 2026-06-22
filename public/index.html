@@ -161,6 +161,16 @@
     .tipo.resultados { background: #ffcf99; }
     .tipo.otros { background: #b9c1cd; }
 
+    .ficha { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+    .ficha:empty { display: none; }
+    .dato {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--borde, #2a3a45);
+      color: var(--texto-suave, #c7d2dc);
+    }
+
     .titulo {
       margin: 0 0 12px;
       font-size: 17px;
@@ -323,6 +333,11 @@
             <time datetime="${escapar(item.fecha)}">${escapar(item.fecha)}</time>
           </div>
           <h2 class="titulo">${escapar(item.titulo)}</h2>
+          <div class="ficha">
+            ${item.grupo ? `<span class="dato">Grupo ${escapar(item.grupo)}</span>` : ''}
+            ${item.acceso ? `<span class="dato">Acceso: ${escapar(item.acceso)}</span>` : ''}
+            ${item.plazas ? `<span class="dato">${escapar(item.plazas)} plazas</span>` : ''}
+          </div>
           <div class="acciones">
             <a href="${escapar(item.urlOficial)}" target="_blank" rel="noopener noreferrer">${etiquetaOficial(item)}</a>
             ${item.urlPdf ? `<a href="${escapar(item.urlPdf)}" target="_blank" rel="noopener noreferrer">PDF</a>` : ''}

@@ -1,0 +1,38 @@
+name: Actualizar oposiciones
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # cada día a las 06:00 UTC (~07:00/08:00 España)
+  workflow_dispatch: {}      # permite lanzarlo a mano
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-datos
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Ejecutar poller (BOE + BOJA)
+        run: node poller.mjs --dias 3
+
+      - name: Commit y push si hay cambios
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- data/oposiciones.json; then
+            echo "Sin cambios en los datos."
+          else
+            git add data/oposiciones.json
+            git commit -m "datos: actualización automática ($(date -u +%Y-%m-%d))"
+            git push
+          fi
