@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>oposito · Oposiciones en España</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --fondo: #111318;
+      --panel: #1a1f27;
+      --panel-2: #202734;
+      --texto: #f3f6fb;
+      --suave: #aab4c3;
+      --borde: #313a49;
+      --acento: #48b7a5;
+      --enlace: #8cc8ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--fondo);
+      color: var(--texto);
+      line-height: 1.45;
+    }
+
+    header, main, footer {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 28px 0 18px;
+      display: flex;
+      gap: 16px;
+      align-items: end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      color: var(--suave);
+      font-size: 14px;
+    }
+
+    .stat {
+      border: 1px solid var(--borde);
+      background: var(--panel);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+
+    .filtros {
+      display: grid;
+      grid-template-columns: 1.3fr 220px 1fr;
+      gap: 10px;
+      padding: 14px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    input, select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--borde);
+      border-radius: 7px;
+      background: #0f1217;
+      color: var(--texto);
+      padding: 0 12px;
+      font: inherit;
+    }
+
+    .estado {
+      color: var(--suave);
+      margin: 14px 0;
+      min-height: 22px;
+    }
+
+    .lista {
+      display: grid;
+      gap: 12px;
+    }
+
+    .tarjeta {
+      border: 1px solid var(--borde);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 16px;
+    }
+
+    .meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      color: var(--suave);
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .tipo {
+      color: #07110f;
+      background: var(--acento);
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+
+    .tipo.admitidos { background: #f0c36b; }
+    .tipo.fechas { background: #9fc6ff; }
+    .tipo.tribunal { background: #d8a6ff; }
+    .tipo.correccion { background: #ff9d8c; }
+    .tipo.nombramiento { background: #a8df7c; }
+    .tipo.plazas { background: #87d7e6; }
+    .tipo.otros { background: #b9c1cd; }
+
+    .titulo {
+      margin: 0 0 12px;
+      font-size: 17px;
+      color: var(--texto);
+    }
+
+    .acciones {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 14px;
+    }
+
+    a {
+      color: var(--enlace);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    footer {
+      color: var(--suave);
+      font-size: 13px;
+      padding: 28px 0;
+    }
+
+    @media (max-width: 760px) {
+      header { align-items: start; }
+      .filtros { grid-template-columns: 1fr; }
+      h1 { font-size: 23px; }
+      .stats { width: 100%; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>oposito ⚖️ · Oposiciones en España (BOE)</h1>
+    <div class="stats">
+      <span class="stat" id="total">Total: ...</span>
+      <span class="stat" id="actualizado">Actualizado: ...</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="filtros" aria-label="Filtros">
+      <input id="q" type="search" placeholder="Buscar por título">
+      <select id="tipo" aria-label="Tipo">
+        <option value="">Todos los tipos</option>
+        <option value="convocatoria">Convocatoria</option>
+        <option value="plazas">Plazas</option>
+        <option value="admitidos">Admitidos / excluidos</option>
+        <option value="resultados">Resultados / aprobados</option>
+        <option value="fechas">Fechas</option>
+        <option value="tribunal">Tribunal</option>
+        <option value="correccion">Corrección</option>
+        <option value="nombramiento">Nombramiento</option>
+        <option value="otros">Otros</option>
+      </select>
+      <select id="organismo" aria-label="Organismo">
+        <option value="">Todos los organismos</option>
+      </select>
+    </section>
+
+    <div class="estado" id="estado">Cargando...</div>
+    <section class="lista" id="lista" aria-live="polite"></section>
+  </main>
+
+  <footer>
+    Datos del BOE (dominio público). Las listas de admitidos enlazan a la fuente oficial; no se almacenan datos personales. No es asesoramiento.
+  </footer>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const lista = $('#lista');
+    const estado = $('#estado');
+    const filtros = {
+      q: $('#q'),
+      tipo: $('#tipo'),
+      organismo: $('#organismo'),
+    };
+
+    function escapar(texto) {
+      return String(texto || '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      }[c]));
+    }
+
+    function pintarItems(items, total) {
+      estado.textContent = total === 0 ? 'No hay resultados con esos filtros.' : `${total} resultados`;
+      lista.innerHTML = items.map((item) => `
+        <article class="tarjeta">
+          <div class="meta">
+            <span class="tipo ${escapar(item.tipo)}">${escapar(item.tipo)}</span>
+            <span>${escapar(item.organismo)}</span>
+            <span>·</span>
+            <time datetime="${escapar(item.fecha)}">${escapar(item.fecha)}</time>
+          </div>
+          <h2 class="titulo">${escapar(item.titulo)}</h2>
+          <div class="acciones">
+            <a href="${escapar(item.urlOficial)}" target="_blank" rel="noopener noreferrer">Ver en el BOE ↗</a>
+            ${item.urlPdf ? `<a href="${escapar(item.urlPdf)}" target="_blank" rel="noopener noreferrer">PDF ↗</a>` : ''}
+          </div>
+        </article>
+      `).join('');
+    }
+
+    async function cargarStats() {
+      const respuesta = await fetch('/api/stats');
+      const stats = await respuesta.json();
+      $('#total').textContent = `Total: ${stats.total}`;
+      $('#actualizado').textContent = `Actualizado: ${stats.actualizado || 'sin datos'}`;
+    }
+
+    async function cargarOrganismos() {
+      const respuesta = await fetch('/api/organismos');
+      const organismos = await respuesta.json();
+      filtros.organismo.innerHTML = '<option value="">Todos los organismos</option>' + organismos.map((item) =>
+        `<option value="${escapar(item.organismo)}">${escapar(item.organismo)} (${item.total})</option>`
+      ).join('');
+    }
+
+    async function cargarOposiciones() {
+      const params = new URLSearchParams();
+      if (filtros.q.value.trim()) params.set('q', filtros.q.value.trim());
+      if (filtros.tipo.value) params.set('tipo', filtros.tipo.value);
+      if (filtros.organismo.value) params.set('organismo', filtros.organismo.value);
+      params.set('limit', '100');
+
+      estado.textContent = 'Cargando...';
+      const respuesta = await fetch(`/api/oposiciones?${params}`);
+      const datos = await respuesta.json();
+      pintarItems(datos.items, datos.total);
+    }
+
+    let temporizador;
+    function refrescarConPausa() {
+      clearTimeout(temporizador);
+      temporizador = setTimeout(cargarOposiciones, 180);
+    }
+
+    filtros.q.addEventListener('input', refrescarConPausa);
+    filtros.tipo.addEventListener('change', cargarOposiciones);
+    filtros.organismo.addEventListener('change', cargarOposiciones);
+
+    Promise.all([cargarStats(), cargarOrganismos()])
+      .then(cargarOposiciones)
+      .catch((error) => {
+        estado.textContent = `No se pudieron cargar los datos: ${error.message}`;
+      });
+  </script>
+</body>
+</html>
