@@ -1,13 +1,15 @@
 # oposito
 
-**oposito** es un MVP local y open-source para agregar oposiciones de empleo público en España a partir del BOE.
+**oposito** es un MVP local y open-source para agregar oposiciones de empleo público en España a partir del BOE y el BOJA.
 
-Lee los sumarios diarios del BOE, extrae la sección **II. Autoridades y personal. - B. Oposiciones y concursos**, clasifica cada publicación por tipo y expone una web local con filtros por texto, tipo y organismo.
+Lee los sumarios diarios del BOE, extrae la sección **II. Autoridades y personal. - B. Oposiciones y concursos**, consulta boletines recientes de Andalucía y expone una web local con filtros por texto, tipo, organismo y fuente.
 
 ## Fuente
 
 - BOE: Sección II.B, Oposiciones y concursos.
 - API usada: `https://www.boe.es/datosabiertos/api/boe/sumario/AAAAMMDD`
+- BOJA: boletín autonómico de Andalucía desde `https://www.juntadeandalucia.es/eboja/`.
+- La fuente BOJA incluye oposiciones autonómicas, Servicio Andaluz de Salud y justicia transferida cuando aparecen en el sumario.
 
 ## Requisitos
 
@@ -17,7 +19,7 @@ Lee los sumarios diarios del BOE, extrae la sección **II. Autoridades y persona
 ## Uso
 
 ```bash
-node poller.mjs          # descarga las últimas oposiciones del BOE -> data/oposiciones.json
+node poller.mjs          # descarga BOE + BOJA -> data/oposiciones.json
 node server.mjs          # web en http://localhost:8090
 ```
 
@@ -35,6 +37,13 @@ node poller.mjs --dias 30
 DIAS=30 node poller.mjs
 ```
 
+Para consultar una sola fuente:
+
+```bash
+node poller.mjs --solo-boe
+node poller.mjs --solo-boja
+```
+
 Para cambiar el puerto:
 
 ```bash
@@ -43,9 +52,18 @@ PORT=3000 node server.mjs
 
 ## API local
 
-- `GET /api/oposiciones?tipo=&organismo=&q=&limit=`
+- `GET /api/oposiciones?tipo=&organismo=&fuente=&q=&limit=`
+- `GET /api/novedades?dias=7`
 - `GET /api/organismos`
 - `GET /api/stats`
+
+Cada item incluye `fuente` (`BOE` o `BOJA`) y `firstSeen`, que conserva la primera vez que oposito vio esa publicación.
+
+## Seguimientos y alertas locales
+
+La web permite guardar la búsqueda actual como seguimiento local en `localStorage`. La pestaña **Mis seguimientos** vuelve a consultar esas búsquedas, marca como **Nuevo** lo visto en los últimos 7 días y puede lanzar una notificación local del navegador si el usuario concede permiso.
+
+La pestaña **Novedades** muestra los items con `firstSeen` reciente desde `/api/novedades`.
 
 ## Legalidad y privacidad
 
@@ -57,9 +75,9 @@ Este proyecto no es asesoramiento legal, administrativo ni profesional.
 
 ## Roadmap
 
-- Añadir boletines autonómicos: BOJA, DOGC, DOGV y otros.
+- Añadir más boletines autonómicos: Madrid/BOCM, Cataluña/DOGC, Galicia/DOG y otros.
 - Añadir BOP provinciales.
-- Añadir universidades, RENFE y ADIF.
+- Añadir universidades, RENFE/ADIF y otros entes públicos.
 - Alertas por email o Telegram.
 - Función para seguir una oposición concreta.
 - Resumen de las bases con IA local.

@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { pollBOJA } from './fuentes/boja.mjs';
 
 const BOE_API = 'https://www.boe.es/datosabiertos/api/boe/sumario/';
 const BOE_BASE = 'https://www.boe.es';
@@ -25,6 +27,11 @@ function fechaIsoDesdeAaaaMmDd(fecha) {
   return `${fecha.slice(0, 4)}-${fecha.slice(4, 6)}-${fecha.slice(6, 8)}`;
 }
 
+function urlBoe(ruta) {
+  if (!ruta) return '';
+  return String(ruta).startsWith('http') ? ruta : `${BOE_BASE}${ruta}`;
+}
+
 function obtenerDias() {
   const indice = process.argv.indexOf('--dias');
   const desdeArg = indice >= 0 ? Number(process.argv[indice + 1]) : undefined;
@@ -33,14 +40,20 @@ function obtenerDias() {
   return Number.isFinite(dias) && dias > 0 ? Math.floor(dias) : 15;
 }
 
-function textoNormalizado(texto) {
+function obtenerFuentes() {
+  if (process.argv.includes('--solo-boe')) return { boe: true, boja: false };
+  if (process.argv.includes('--solo-boja')) return { boe: false, boja: true };
+  return { boe: true, boja: true };
+}
+
+export function textoNormalizado(texto) {
   return String(texto || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 }
 
-function clasificarTitulo(titulo) {
+export function clasificarTitulo(titulo) {
   const t = textoNormalizado(titulo);
 
   // Prioridad: lo MÁS específico primero. "convoca" aparece en muchos títulos que en
@@ -118,8 +131,9 @@ function extraerItems(data, fecha) {
           organismo,
           fecha: fechaIsoDesdeAaaaMmDd(fecha),
           tipo: clasificarTitulo(titulo),
-          urlPdf: rutaPdf ? `${BOE_BASE}${rutaPdf}` : '',
-          urlHtml: rutaHtml ? `${BOE_BASE}${rutaHtml}` : '',
+          fuente: 'BOE',
+          urlPdf: urlBoe(rutaPdf),
+          urlHtml: urlBoe(rutaHtml),
           urlOficial: `${BOE_BASE}/diario_boe/txt.php?id=${encodeURIComponent(id)}`,
         });
       }
@@ -131,8 +145,26 @@ function extraerItems(data, fecha) {
 
 function fusionarPorId(existentes, nuevos) {
   const mapa = new Map();
-  for (const item of existentes) mapa.set(item.id, item);
-  for (const item of nuevos) mapa.set(item.id, item);
+  const ahora = new Date().toISOString();
+
+  for (const item of existentes) {
+    mapa.set(item.id, {
+      ...item,
+      fuente: item.fuente || 'BOE',
+      firstSeen: item.firstSeen || ahora,
+    });
+  }
+
+  for (const item of nuevos) {
+    const anterior = mapa.get(item.id);
+    mapa.set(item.id, {
+      ...anterior,
+      ...item,
+      fuente: item.fuente || anterior?.fuente || 'BOE',
+      firstSeen: anterior?.firstSeen || item.firstSeen || ahora,
+    });
+  }
+
   return [...mapa.values()].sort((a, b) => {
     const porFecha = String(b.fecha).localeCompare(String(a.fecha));
     return porFecha || String(a.id).localeCompare(String(b.id));
@@ -141,28 +173,38 @@ function fusionarPorId(existentes, nuevos) {
 
 async function main() {
   const dias = obtenerDias();
+  const fuentes = obtenerFuentes();
   const existentes = await cargarExistentes();
   const nuevos = [];
 
-  console.log(`Buscando oposiciones del BOE en los últimos ${dias} días...`);
+  if (fuentes.boe) {
+    console.log(`Buscando oposiciones del BOE en los últimos ${dias} días...`);
 
-  for (let i = 0; i < dias; i += 1) {
-    const fecha = new Date();
-    fecha.setDate(fecha.getDate() - i);
-    const fechaBoe = fechaAaaaMmDd(fecha);
+    for (let i = 0; i < dias; i += 1) {
+      const fecha = new Date();
+      fecha.setDate(fecha.getDate() - i);
+      const fechaBoe = fechaAaaaMmDd(fecha);
 
-    try {
-      const sumario = await obtenerSumario(fechaBoe);
-      if (sumario) {
-        const encontrados = extraerItems(sumario, fechaBoe);
-        nuevos.push(...encontrados);
-        console.log(`${fechaBoe}: ${encontrados.length} items en II.B.`);
+      try {
+        const sumario = await obtenerSumario(fechaBoe);
+        if (sumario) {
+          const encontrados = extraerItems(sumario, fechaBoe);
+          nuevos.push(...encontrados);
+          console.log(`${fechaBoe}: ${encontrados.length} items en II.B.`);
+        }
+      } catch (error) {
+        console.warn(`${fechaBoe}: error al consultar el BOE: ${error.message}`);
       }
-    } catch (error) {
-      console.warn(`${fechaBoe}: error al consultar el BOE: ${error.message}`);
-    }
 
-    if (i < dias - 1) await esperar(300);
+      if (i < dias - 1) await esperar(300);
+    }
+  }
+
+  if (fuentes.boja) {
+    console.log(`Buscando oposiciones del BOJA en los últimos ${dias} boletines...`);
+    const encontradosBoja = await pollBOJA({ dias });
+    nuevos.push(...encontradosBoja);
+    console.log(`BOJA: ${encontradosBoja.length} items filtrados.`);
   }
 
   const fusionados = fusionarPorId(existentes, nuevos);
@@ -173,7 +215,9 @@ async function main() {
   console.log(`Nuevos leídos en esta ejecución: ${nuevos.length}.`);
 }
 
-main().catch((error) => {
-  console.error(`Error fatal del poller: ${error.message}`);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error(`Error fatal del poller: ${error.message}`);
+    process.exitCode = 1;
+  });
+}

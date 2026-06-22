@@ -15,6 +15,7 @@
       --borde: #313a49;
       --acento: #48b7a5;
       --enlace: #8cc8ff;
+      --aviso: #f0c36b;
     }
 
     * { box-sizing: border-box; }
@@ -47,23 +48,42 @@
       letter-spacing: 0;
     }
 
-    .stats {
+    .stats, .pestanas, .acciones {
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stats {
       color: var(--suave);
       font-size: 14px;
     }
 
-    .stat {
+    .stat, button {
       border: 1px solid var(--borde);
       background: var(--panel);
+      color: var(--texto);
       padding: 8px 10px;
       border-radius: 8px;
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      min-height: 42px;
+    }
+
+    button:hover, button.activa {
+      border-color: var(--acento);
+    }
+
+    .pestanas {
+      margin-bottom: 14px;
     }
 
     .filtros {
       display: grid;
-      grid-template-columns: 1.3fr 220px 1fr;
+      grid-template-columns: 1.25fr 180px 150px 1fr auto;
       gap: 10px;
       padding: 14px;
       background: var(--panel);
@@ -89,16 +109,25 @@
       min-height: 22px;
     }
 
-    .lista {
+    .lista, .seguimientos {
       display: grid;
       gap: 12px;
     }
 
-    .tarjeta {
+    .tarjeta, .seguimiento {
       border: 1px solid var(--borde);
       border-radius: 8px;
       background: var(--panel);
       padding: 16px;
+    }
+
+    .seguimiento-cabecera {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
     }
 
     .meta {
@@ -111,7 +140,7 @@
       margin-bottom: 10px;
     }
 
-    .tipo {
+    .tipo, .fuente, .nuevo {
       color: #07110f;
       background: var(--acento);
       border-radius: 999px;
@@ -121,12 +150,15 @@
       font-size: 11px;
     }
 
+    .fuente { background: #9fc6ff; }
+    .nuevo { background: var(--aviso); }
     .tipo.admitidos { background: #f0c36b; }
     .tipo.fechas { background: #9fc6ff; }
     .tipo.tribunal { background: #d8a6ff; }
     .tipo.correccion { background: #ff9d8c; }
     .tipo.nombramiento { background: #a8df7c; }
     .tipo.plazas { background: #87d7e6; }
+    .tipo.resultados { background: #ffcf99; }
     .tipo.otros { background: #b9c1cd; }
 
     .titulo {
@@ -136,11 +168,10 @@
     }
 
     .acciones {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
       font-size: 14px;
     }
+
+    .oculto { display: none; }
 
     a {
       color: var(--enlace);
@@ -155,58 +186,93 @@
       padding: 28px 0;
     }
 
+    @media (max-width: 900px) {
+      .filtros { grid-template-columns: 1fr 1fr; }
+      .filtros button { grid-column: 1 / -1; }
+    }
+
     @media (max-width: 760px) {
       header { align-items: start; }
       .filtros { grid-template-columns: 1fr; }
       h1 { font-size: 23px; }
-      .stats { width: 100%; flex-wrap: wrap; }
+      .stats { width: 100%; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>oposito ⚖️ · Oposiciones en España (BOE)</h1>
+    <h1>oposito · Oposiciones en España</h1>
     <div class="stats">
       <span class="stat" id="total">Total: ...</span>
+      <span class="stat" id="fuentes">Fuentes: ...</span>
       <span class="stat" id="actualizado">Actualizado: ...</span>
     </div>
   </header>
 
   <main>
-    <section class="filtros" aria-label="Filtros">
-      <input id="q" type="search" placeholder="Buscar por título">
-      <select id="tipo" aria-label="Tipo">
-        <option value="">Todos los tipos</option>
-        <option value="convocatoria">Convocatoria</option>
-        <option value="plazas">Plazas</option>
-        <option value="admitidos">Admitidos / excluidos</option>
-        <option value="resultados">Resultados / aprobados</option>
-        <option value="fechas">Fechas</option>
-        <option value="tribunal">Tribunal</option>
-        <option value="correccion">Corrección</option>
-        <option value="nombramiento">Nombramiento</option>
-        <option value="otros">Otros</option>
-      </select>
-      <select id="organismo" aria-label="Organismo">
-        <option value="">Todos los organismos</option>
-      </select>
+    <nav class="pestanas" aria-label="Secciones">
+      <button id="tab-busqueda" class="activa" type="button">Buscar</button>
+      <button id="tab-seguimientos" type="button">Mis seguimientos</button>
+      <button id="tab-novedades" type="button">Novedades</button>
+      <button id="activar-notificaciones" class="oculto" type="button">Activar notificaciones</button>
+    </nav>
+
+    <section id="vista-busqueda">
+      <section class="filtros" aria-label="Filtros">
+        <input id="q" type="search" placeholder="Buscar por título">
+        <select id="tipo" aria-label="Tipo">
+          <option value="">Todos los tipos</option>
+          <option value="convocatoria">Convocatoria</option>
+          <option value="plazas">Plazas</option>
+          <option value="admitidos">Admitidos / excluidos</option>
+          <option value="resultados">Resultados / aprobados</option>
+          <option value="fechas">Fechas</option>
+          <option value="tribunal">Tribunal</option>
+          <option value="correccion">Corrección</option>
+          <option value="nombramiento">Nombramiento</option>
+          <option value="otros">Otros</option>
+        </select>
+        <select id="fuente" aria-label="Fuente">
+          <option value="">Todas las fuentes</option>
+          <option value="BOE">BOE</option>
+          <option value="BOJA">BOJA</option>
+        </select>
+        <select id="organismo" aria-label="Organismo">
+          <option value="">Todos los organismos</option>
+        </select>
+        <button id="seguir" type="button">Seguir esta búsqueda</button>
+      </section>
+      <div class="estado" id="estado">Cargando...</div>
+      <section class="lista" id="lista" aria-live="polite"></section>
     </section>
 
-    <div class="estado" id="estado">Cargando...</div>
-    <section class="lista" id="lista" aria-live="polite"></section>
+    <section id="vista-seguimientos" class="oculto">
+      <div class="estado" id="estado-seguimientos"></div>
+      <section class="seguimientos" id="seguimientos"></section>
+    </section>
+
+    <section id="vista-novedades" class="oculto">
+      <div class="estado" id="estado-novedades">Cargando novedades...</div>
+      <section class="lista" id="novedades"></section>
+    </section>
   </main>
 
   <footer>
-    Datos del BOE (dominio público). Las listas de admitidos enlazan a la fuente oficial; no se almacenan datos personales. No es asesoramiento.
+    Datos del BOE y BOJA. Las listas de admitidos enlazan a la fuente oficial; no se almacenan datos personales. No es asesoramiento.
   </footer>
 
   <script>
     const $ = (selector) => document.querySelector(selector);
     const lista = $('#lista');
     const estado = $('#estado');
+    const seguimientosEl = $('#seguimientos');
+    const novedadesEl = $('#novedades');
+    const estadoSeguimientos = $('#estado-seguimientos');
+    const estadoNovedades = $('#estado-novedades');
     const filtros = {
       q: $('#q'),
       tipo: $('#tipo'),
+      fuente: $('#fuente'),
       organismo: $('#organismo'),
     };
 
@@ -220,29 +286,82 @@
       }[c]));
     }
 
-    function pintarItems(items, total) {
-      estado.textContent = total === 0 ? 'No hay resultados con esos filtros.' : `${total} resultados`;
-      lista.innerHTML = items.map((item) => `
+    function esNuevo(item) {
+      const tiempo = Date.parse(item.firstSeen || '');
+      return Number.isFinite(tiempo) && tiempo >= Date.now() - 7 * 24 * 60 * 60 * 1000;
+    }
+
+    function paramsDesdeFiltro(filtro, limit = 100) {
+      const params = new URLSearchParams();
+      if (filtro.q) params.set('q', filtro.q);
+      if (filtro.tipo) params.set('tipo', filtro.tipo);
+      if (filtro.fuente) params.set('fuente', filtro.fuente);
+      if (filtro.organismo) params.set('organismo', filtro.organismo);
+      params.set('limit', String(limit));
+      return params;
+    }
+
+    function filtroActual() {
+      return {
+        q: filtros.q.value.trim(),
+        tipo: filtros.tipo.value,
+        fuente: filtros.fuente.value,
+        organismo: filtros.organismo.value,
+      };
+    }
+
+    function pintarItems(destino, items, total, opciones = {}) {
+      const etiquetaOficial = (item) => item.fuente === 'BOJA' ? 'Ver en el BOJA' : 'Ver en el BOE';
+      destino.innerHTML = items.map((item) => `
         <article class="tarjeta">
           <div class="meta">
             <span class="tipo ${escapar(item.tipo)}">${escapar(item.tipo)}</span>
+            <span class="fuente">${escapar(item.fuente || 'BOE')}</span>
+            ${opciones.marcarNuevos && esNuevo(item) ? '<span class="nuevo">Nuevo</span>' : ''}
             <span>${escapar(item.organismo)}</span>
             <span>·</span>
             <time datetime="${escapar(item.fecha)}">${escapar(item.fecha)}</time>
           </div>
           <h2 class="titulo">${escapar(item.titulo)}</h2>
           <div class="acciones">
-            <a href="${escapar(item.urlOficial)}" target="_blank" rel="noopener noreferrer">Ver en el BOE ↗</a>
-            ${item.urlPdf ? `<a href="${escapar(item.urlPdf)}" target="_blank" rel="noopener noreferrer">PDF ↗</a>` : ''}
+            <a href="${escapar(item.urlOficial)}" target="_blank" rel="noopener noreferrer">${etiquetaOficial(item)}</a>
+            ${item.urlPdf ? `<a href="${escapar(item.urlPdf)}" target="_blank" rel="noopener noreferrer">PDF</a>` : ''}
           </div>
         </article>
       `).join('');
+      return total;
+    }
+
+    function leerSeguimientos() {
+      try {
+        const datos = JSON.parse(localStorage.getItem('seguimientos') || '[]');
+        return Array.isArray(datos) ? datos : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function guardarSeguimientos(items) {
+      localStorage.setItem('seguimientos', JSON.stringify(items));
+    }
+
+    function describirFiltro(filtro) {
+      const partes = [];
+      if (filtro.q) partes.push(`texto: ${filtro.q}`);
+      if (filtro.tipo) partes.push(`tipo: ${filtro.tipo}`);
+      if (filtro.fuente) partes.push(`fuente: ${filtro.fuente}`);
+      if (filtro.organismo) partes.push(`organismo: ${filtro.organismo}`);
+      return partes.length ? partes.join(' · ') : 'Todas las oposiciones';
     }
 
     async function cargarStats() {
       const respuesta = await fetch('/api/stats');
       const stats = await respuesta.json();
+      const fuentes = Object.entries(stats.porFuente || {})
+        .map(([fuente, total]) => `${fuente}: ${total}`)
+        .join(' · ');
       $('#total').textContent = `Total: ${stats.total}`;
+      $('#fuentes').textContent = fuentes ? `Fuentes: ${fuentes}` : 'Fuentes: sin datos';
       $('#actualizado').textContent = `Actualizado: ${stats.actualizado || 'sin datos'}`;
     }
 
@@ -255,16 +374,77 @@
     }
 
     async function cargarOposiciones() {
-      const params = new URLSearchParams();
-      if (filtros.q.value.trim()) params.set('q', filtros.q.value.trim());
-      if (filtros.tipo.value) params.set('tipo', filtros.tipo.value);
-      if (filtros.organismo.value) params.set('organismo', filtros.organismo.value);
-      params.set('limit', '100');
-
       estado.textContent = 'Cargando...';
-      const respuesta = await fetch(`/api/oposiciones?${params}`);
+      const respuesta = await fetch(`/api/oposiciones?${paramsDesdeFiltro(filtroActual())}`);
       const datos = await respuesta.json();
-      pintarItems(datos.items, datos.total);
+      estado.textContent = datos.total === 0 ? 'No hay resultados con esos filtros.' : `${datos.total} resultados`;
+      pintarItems(lista, datos.items, datos.total);
+    }
+
+    function seguirBusqueda() {
+      const seguimiento = filtroActual();
+      const clave = JSON.stringify(seguimiento);
+      const actuales = leerSeguimientos();
+      if (!actuales.some((item) => JSON.stringify(item) === clave)) {
+        actuales.push(seguimiento);
+        guardarSeguimientos(actuales);
+      }
+      estado.textContent = 'Búsqueda guardada en Mis seguimientos.';
+    }
+
+    async function cargarSeguimientos() {
+      const seguimientos = leerSeguimientos();
+      seguimientosEl.innerHTML = '';
+      if (seguimientos.length === 0) {
+        estadoSeguimientos.textContent = 'No tienes seguimientos guardados.';
+        return;
+      }
+
+      estadoSeguimientos.textContent = `${seguimientos.length} seguimientos guardados`;
+      let nuevos = 0;
+
+      for (const [indice, seguimiento] of seguimientos.entries()) {
+        const respuesta = await fetch(`/api/oposiciones?${paramsDesdeFiltro(seguimiento, 25)}`);
+        const datos = await respuesta.json();
+        nuevos += datos.items.filter(esNuevo).length;
+
+        const bloque = document.createElement('article');
+        bloque.className = 'seguimiento';
+        bloque.innerHTML = `
+          <div class="seguimiento-cabecera">
+            <strong>${escapar(describirFiltro(seguimiento))}</strong>
+            <button type="button" data-eliminar="${indice}">Eliminar</button>
+          </div>
+          <div class="lista"></div>
+        `;
+        if (datos.items.length) {
+          pintarItems(bloque.querySelector('.lista'), datos.items, datos.total, { marcarNuevos: true });
+        } else {
+          bloque.querySelector('.lista').innerHTML = '<div class="estado">Sin resultados.</div>';
+        }
+        seguimientosEl.appendChild(bloque);
+      }
+
+      if (nuevos > 0 && 'Notification' in window && Notification.permission === 'granted') {
+        new Notification('oposito', { body: `${nuevos} novedades en tus seguimientos.` });
+      }
+    }
+
+    async function cargarNovedades() {
+      estadoNovedades.textContent = 'Cargando novedades...';
+      const respuesta = await fetch('/api/novedades?dias=7');
+      const items = await respuesta.json();
+      estadoNovedades.textContent = items.length === 0 ? 'No hay novedades en los últimos 7 días.' : `${items.length} novedades en los últimos 7 días`;
+      pintarItems(novedadesEl, items, items.length, { marcarNuevos: true });
+    }
+
+    function cambiarVista(nombre) {
+      for (const vista of ['busqueda', 'seguimientos', 'novedades']) {
+        $(`#vista-${vista}`).classList.toggle('oculto', vista !== nombre);
+        $(`#tab-${vista}`).classList.toggle('activa', vista === nombre);
+      }
+      if (nombre === 'seguimientos') cargarSeguimientos();
+      if (nombre === 'novedades') cargarNovedades();
     }
 
     let temporizador;
@@ -275,7 +455,25 @@
 
     filtros.q.addEventListener('input', refrescarConPausa);
     filtros.tipo.addEventListener('change', cargarOposiciones);
+    filtros.fuente.addEventListener('change', cargarOposiciones);
     filtros.organismo.addEventListener('change', cargarOposiciones);
+    $('#seguir').addEventListener('click', seguirBusqueda);
+    $('#tab-busqueda').addEventListener('click', () => cambiarVista('busqueda'));
+    $('#tab-seguimientos').addEventListener('click', () => cambiarVista('seguimientos'));
+    $('#tab-novedades').addEventListener('click', () => cambiarVista('novedades'));
+    seguimientosEl.addEventListener('click', (evento) => {
+      const boton = evento.target.closest('[data-eliminar]');
+      if (!boton) return;
+      const seguimientos = leerSeguimientos();
+      seguimientos.splice(Number(boton.dataset.eliminar), 1);
+      guardarSeguimientos(seguimientos);
+      cargarSeguimientos();
+    });
+
+    if ('Notification' in window && Notification.permission === 'default') {
+      $('#activar-notificaciones').classList.remove('oculto');
+      $('#activar-notificaciones').addEventListener('click', () => Notification.requestPermission());
+    }
 
     Promise.all([cargarStats(), cargarOrganismos()])
       .then(cargarOposiciones)
